@@ -33,8 +33,8 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/JavaApp:${IMAGE_TAG} .
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/javaapp:${IMAGE_TAG} .
 
       - name: Push Docker image
         run: |
-          docker push ${{ secrets.DOCKER_USERNAME }}/JavaApp:${IMAGE_TAG}
+          docker push ${{ secrets.DOCKER_USERNAME }}/javaapp:${IMAGE_TAG}
