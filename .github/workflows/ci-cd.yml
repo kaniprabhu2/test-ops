@@ -38,3 +38,21 @@ jobs:
       - name: Push Docker image
         run: |
           docker push ${{ secrets.DOCKER_USERNAME }}/javaapp:${IMAGE_TAG}
+
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            docker pull ${{ secrets.DOCKER_USERNAME }}/test-ops:${IMAGE_TAG}
+
+            docker stop test-ops || true
+            docker rm test-ops || true
+
+            docker run -d \
+              --name test-ops \
+              -p 80:8080 \
+              --restart always \
+              ${{ secrets.DOCKER_USERNAME }}/test-ops:${IMAGE_TAG}
