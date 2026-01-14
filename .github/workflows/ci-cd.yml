@@ -1,4 +1,4 @@
-name: CI - Java App (GitHub Hosted Runner)
+name: CI/CD - Deploy to EC2 via SSH with DAST
 
 on:
   push:
@@ -6,14 +6,20 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-and-push:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
+      # -----------------------
+      # CHECKOUT
+      # -----------------------
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Java 11
+      # -----------------------
+      # BUILD
+      # -----------------------
+      - name: Setup Java 11
         uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -25,6 +31,9 @@ jobs:
       - name: Set image tag (commit SHA)
         run: echo "IMAGE_TAG=${GITHUB_SHA}" >> $GITHUB_ENV
 
+      # -----------------------
+      # DOCKER BUILD & PUSH
+      # -----------------------
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
@@ -33,12 +42,15 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/javaapp:${IMAGE_TAG} .
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/test-ops:${IMAGE_TAG} .
 
       - name: Push Docker image
         run: |
-          docker push ${{ secrets.DOCKER_USERNAME }}/javaapp:${IMAGE_TAG}
+          docker push ${{ secrets.DOCKER_USERNAME }}/test-ops:${IMAGE_TAG}
 
+      # -----------------------
+      # DEPLOY TO EC2 (SSH)
+      # -----------------------
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -56,3 +68,12 @@ jobs:
               -p 80:8080 \
               --restart always \
               ${{ secrets.DOCKER_USERNAME }}/test-ops:${IMAGE_TAG}
+
+      # -----------------------
+      # DAST – OWASP ZAP
+      # -----------------------
+      - name: Run DAST scan (OWASP ZAP)
+        uses: zaproxy/action-baseline@v0.12.0
+        with:
+          target: http://${{ secrets.EC2_HOST }}
+          fail_action: false
